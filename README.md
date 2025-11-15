@@ -1,22 +1,22 @@
 # nfa2dfa
 
-Программа для работы c конечными автоматами:
+A small tool for working with finite automata:
 
-- читает **НКА** из `.dot` файла (Graphviz);
-- строит эквивалентный **ДКА** (алгоритм подмножеств);
-- минимизирует ДКА **двумя разными алгоритмами**:
-  - табличный алгоритм (pairwise / table-filling),
-  - алгоритм **Хопкрофта**;
-- генерирует `.dot` файлы для полученных автоматов, которые можно визуализировать с помощью Graphviz.
+- reads an **NFA** from a Graphviz `.dot` file;
+- builds an equivalent **DFA** (subset construction);
+- minimizes the DFA using **two different algorithms**:
+  - the table-filling (pairwise) minimization algorithm,
+  - **Hopcroft's algorithm**;
+- generates `.dot` files for all resulting automata so they can be visualized with Graphviz.
 
-## Требования
+## Requirements
 
-- Python 3.10+ (подойдёт и 3.8/3.9, если убрать аннотацию `str | None`, но по умолчанию ориентируемся на 3.10+);
-- библиотек сторонних нет — используется только стандартная библиотека.
+- Python 3.10+ (it will also work with 3.8/3.9 if you remove the `str | None` annotation, but the default target is 3.10+);
+- no external libraries — only the Python standard library is used.
 
-## Формат входного НКА (.dot)
+## Input NFA format (.dot)
 
-Ожидается `.dot` примерно такого вида:
+The program expects a `.dot` file roughly of this form:
 
 ```dot
 digraph NFA {
@@ -39,24 +39,24 @@ digraph NFA {
 }
 ```
 
-Правила:
+Rules:
 
-- Стартовое состояние задаётся через специальный узел `__start`:
+- The start state is specified via a special node `__start`:
 
   ```dot
   __start [label="", shape=none];
   __start -> 0;
   ```
 
-  Здесь `0` — стартовое состояние.
+  Here `0` is the start state.
 
-- Принимающие состояния задаются с атрибутом `shape=doublecircle`:
+- Accepting states are marked with `shape=doublecircle`:
 
   ```dot
   21 [shape=doublecircle];
   ```
 
-- Переходы задаются в виде:
+- Transitions are specified as:
 
   ```dot
   0 -> 1 [label="a"];
@@ -64,52 +64,52 @@ digraph NFA {
   20 -> 21 [label="b,ε"];
   ```
 
-  - Если в метке несколько символов, они разделяются запятой.
-  - Epsilon-переход обозначается строкой `ε` (греческая буква эпсилон).
-    Если в метке `b,ε`, это означает переход по `b` **и** ε-переход.
+  - If there are several symbols on an edge, they are separated by commas.
+  - Epsilon transitions use the symbol `ε` (Greek epsilon).
+    If the label is `b,ε`, this means a transition on `b` **and** an epsilon transition.
 
-- Имена состояний должны быть «простыми» (как у Graphviz по умолчанию):
-  числа (`0`, `1`, …) или идентификаторы из `\w` (латиница/цифры/подчёркивание).  
-  Узел `__start` зарезервирован под стартовую стрелку и **не считается** состоянием НКА.
+- State names should be “simple” (like Graphviz defaults):
+  integers (`0`, `1`, …) or identifiers made of `\w` (Latin letters/digits/underscore).  
+  The node `__start` is reserved for the start arrow and **is not** considered an NFA state.
 
-## Что делает программа
+## What the program does
 
-1. **Парсинг НКА** из `.dot`:
-   - извлекает множество состояний;
-   - определяет стартовое и принимающие;
-   - строит таблицу переходов `transitions[state][symbol] = {next_states}`;
-   - выделяет алфавит (все символы меток, кроме `ε`).
+1. **Parsing the NFA** from `.dot`:
+   - extracts the set of states;
+   - finds the start and accepting states;
+   - builds the transition table `transitions[state][symbol] = {next_states}`;
+   - extracts the alphabet (all symbols on edges except `ε`).
 
-2. **Построение ДКА**:
-   - реализован стандартный алгоритм подмножеств (subset construction);
-   - состояния ДКА — множества состояний НКА;
-   - в коде ДКА состояния перенумерованы `0..n-1`;
-   - в поле `state_mapping` хранится отображение  
-     `номер_состояния_ДКА -> множество состояний НКА`.
+2. **Building a DFA**:
+   - uses the standard subset construction algorithm;
+   - DFA states are subsets of NFA states;
+   - in code, DFA states are numbered `0..n-1`;
+   - field `state_mapping` stores the mapping  
+     `dfa_state_number -> set of NFA states`.
 
-3. **Минимизация ДКА (2 алгоритма)**:
-   - **Табличный алгоритм (pairwise / table-filling)**:
-     - строится таблица различимости пар состояний;
-     - помечаем пары (p, q), где один принимающий, другой — нет;
-     - итеративно расширяем множество помеченных пар;
-     - непомеченные пары объединяются в классы эквивалентности.
+3. **DFA minimization (2 algorithms)**:
+   - **Table-filling algorithm (pairwise / table-filling)**:
+     - builds a table of distinguishable pairs of states;
+     - marks pairs `(p, q)` where exactly one of them is accepting;
+     - iteratively propagates “distinguishable” marks;
+     - unmarked pairs form equivalence classes.
 
-   - **Алгоритм Хопкрофта**:
-     - стартовое разбиение: `F` (принимающие) и `Q \ F`;
-     - далее итеративно делим классы, уточняя разбиение по обратным переходам;
-     - результат — минимальный ДКА c асимптотикой `O(|Σ| * |Q| log |Q|)`.
+   - **Hopcroft's algorithm**:
+     - initial partition: `F` (accepting states) and `Q \ F`;
+     - then iteratively refines the partition using reverse transitions;
+     - the result is a minimal DFA with time complexity `O(|Σ| * |Q| log |Q|)`.
 
-   В обоих случаях:
-   - ДКА предварительно дополняется до **полного** (добавляется поглощающее состояние `sink`);
-   - неподходящие переходы ведут в `sink`;
-   - после этого учитываются только **достижимые** состояния.
+   In both algorithms:
+   - the DFA is first made **complete** (a sink state is added);
+   - missing transitions are redirected to the sink;
+   - then only **reachable** states are kept.
 
-4. **Генерация `.dot`**:
-   - для трёх автоматов:
-     - исходный ДКА,
-     - минимальный ДКА (табличный алгоритм),
-     - минимальный ДКА (алгоритм Хопкрофта);
-   - формат вывода:
+4. **DOT generation**:
+   - for three automata:
+     - the original DFA (from the NFA),
+     - the minimal DFA (table-filling algorithm),
+     - the minimal DFA (Hopcroft's algorithm);
+   - output format:
 
      ```dot
      digraph DFA_MIN_TABLE {
@@ -125,26 +125,26 @@ digraph NFA {
      }
      ```
 
-## Запуск
+## Usage
 
 ```bash
-python main.py input.dot --out-prefix result
+python automata_minimizer.py input.dot --out-prefix result
 ```
 
-Где:
+Where:
 
-- `input.dot` — файл с НКА в формате, описанном выше;
-- `--out-prefix result` — префикс для имён выходных файлов (по умолчанию `automaton`).
+- `input.dot` is the NFA file in the format described above;
+- `--out-prefix result` is the prefix for output file names (by default `automaton`).
 
-После запуска появятся файлы:
+After running you will get:
 
-- `result_dfa.dot` — ДКА, построенный из исходного НКА;
-- `result_min_table.dot` — минимальный ДКА (табличный алгоритм);
-- `result_min_hopcroft.dot` — минимальный ДКА (алгоритм Хопкрофта).
+- `result_dfa.dot` — DFA constructed from the given NFA;
+- `result_min_table.dot` — minimal DFA (table-filling algorithm);
+- `result_min_hopcroft.dot` — minimal DFA (Hopcroft's algorithm).
 
-## Визуализация
+## Visualization
 
-Для визуализации используй Graphviz. Например:
+To visualize the automata, use Graphviz. For example:
 
 ```bash
 dot -Tpng result_dfa.dot -o dfa.png
@@ -152,9 +152,10 @@ dot -Tpng result_min_table.dot -o dfa_min_table.png
 dot -Tpng result_min_hopcroft.dot -o dfa_min_hopcroft.png
 ```
 
-## Замечания
+## Notes
 
-- Оба алгоритма минимизации (табличный и Хопкрофта) дают **один и тот же по мощности** минимальный автомат.  
-  Разница может быть только в названии состояний.
-- Поглощающее состояние (`sink`) будет присутствовать в минимальном автомате, если оно необходимо для полноты ДКА.
-- Во внутреннем представлении ДКА всегда нумеруется целыми числами `0..n-1`, но через `state_mapping` можно понять, каким множествам состояний НКА они соответствуют.
+- Both minimization algorithms (table-filling and Hopcroft) produce **automata with the same number of states**.  
+  The only difference may be the numbering of states.
+- The sink state will appear in the minimal DFA if it is required to make the automaton complete.
+- Internally, DFA states are always numbered with integers `0..n-1`,  
+  but you can use `state_mapping` to see which sets of NFA states they correspond to.
