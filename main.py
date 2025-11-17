@@ -425,8 +425,6 @@ def dfa_to_dot(dfa: DFA, path: str, name: str = "DFA") -> None:
             for s in sorted(dfa.states):
                 if s in dfa.accept_states:
                     f.write(f"    {s} [shape=doublecircle];\n")
-                else:
-                    f.write(f"    {s} [shape=circle];\n")
 
             for s in sorted(dfa.states):
                 row = dfa.transitions.get(s, {})
